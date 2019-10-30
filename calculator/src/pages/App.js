@@ -2,147 +2,182 @@ import React, { useState, useEffect } from 'react';
 import CalcButton from 'components/CalcButton'
 import './App.css';
 
+// 숫자 확인 함수
 function isNumber(text) {
     if( undefined !== text && null !== text ) {
-        return (/^[0-9]$/g).test(text.toString().trim());
+        return (/^[\d]+$/g).test(text.toString().trim());
     } else {
         return false
     }
 }
 
+// 사칙연산 변환 및 계산 함수
+function _calculating(target, oper, input) {
+    let result = target;
+    switch(oper) {
+        case "+":
+            result = Number(target) + Number(input);
+            break;
+        case "-":
+            result = Number(target) - Number(input);
+            break;
+        case "*":
+            result = Number(target) * Number(input);
+            break;
+        case "/":
+            if( Number(input) !== 0 ) {
+                result = Number(target) / Number(input);
+            }
+            break;
+    }
+    return result
+}
+
 function App() {
 
-    const [ result, setResult ] = useState(0);
-    const [ display, setDisplay ] = useState([]);
-    const [ input, setInput ] = useState(null);
+    //화면 변수
+    const [ result, setResult ] = useState(0); //(Number)
+    const [ display, setDisplay ] = useState([]); //(String)
+    const [ input, setInput ] = useState(null); //(String)
     const [ displayResult, setDisplayResult ] = useState(false);
-    const [ inputReset, setInputReset ] = useState(false);
+    //메모리 변수
+    const [ tmpInput, setTmpInput ] = useState(null); //(Number)
+    const [ tmpOper, setTmpOper ] = useState(null); //(String)
 
-    useEffect(()=>{
-        setDisplayResult(false)
-    },[input])
+    useEffect(()=>{ //=> setTmpOper
+        let newDisplay = [...display];
 
-    useEffect(()=>{
-        setDisplayResult(true)
-    },[result])
+        if( null === tmpOper) {
+            return
+        } else if( "=" === tmpOper ) { //등호 예외처리
+            if( false === isNumber(newDisplay[newDisplay.length - 1]) ) {
+                newDisplay.push( tmpInput )
+                setDisplayResult(true)
+            }
+        } else { //사칙연산 경우
+            //연산 대상이 없을 경우 (숫자 선택한적 없는 경우)
+            if( newDisplay.length === 0 ) {
+                console.log(tmpInput)
+                if( isNumber(tmpInput) ) {
+                    newDisplay.push(tmpInput)
+                } else {
+                    return;
+                }
+            }
+
+            //마지막이 연산자일 경우 교체
+            if( false === isNumber(newDisplay[newDisplay.length - 1]) ) {
+                if( null !== tmpInput ) {
+                    newDisplay.push(tmpInput)
+                } else {
+                    newDisplay.pop();
+                }
+            }
+
+            newDisplay.push(tmpOper)
+        }
+        
+        setDisplay([...newDisplay])
+        setTmpInput(null)
+        
+    }, [tmpOper])
+
+    useEffect(()=>{ //=> setDisplay
+        calculate()
+    }, [display])
+
+    useEffect(()=>{ //=> setTmpInput
+        if( tmpInput !== null ) {
+            if( false === isNumber(display[display.length - 1]) ) {
+                setInput( tmpInput.toString() )
+            }
+
+            setTmpOper(null)
+        }
+
+    }, [tmpInput])
+
+    useEffect(()=>{ //=> setResult
+        if( result !== null ) {
+            setDisplayResult(true)
+            setTmpInput(null)
+            setTmpOper(null)
+        }
+        
+    }, [result])
+
+    useEffect(()=>{//=> setInput
+        if( input !== null ) {
+            setDisplayResult(false)
+        }
+        
+    }, [input])
     
-    function append(value) {
-        if( isNumber(value) ) {
-            if( null === input || inputReset ) {
-                setInput(value.toString())
+    // 코어 연산
+    function calculate() {
+        let calcArr = [ ...display ]
+
+        //연산자로 끝난 경우 입력숫자 추가
+        if( false === isNumber(calcArr[calcArr.length-1]) ) {
+            if( null !== tmpInput ) {
+                calcArr.push(tmpInput)
             } else {
-                setInput(input + value.toString())
+                calcArr.pop()
             }
-            setInputReset(false)
         }
-    }
-    function plus() {
-        if( inputReset ) {
-            if( false === isNumber(display[display.length-1]) ) {
-                const newDisplay = display;
-                newDisplay.pop();
-                setDisplay([...newDisplay, "+"])
-            }
-            return;
-        }
-        
-        if( null !== input ) {
-            if( isNumber(display[display.length-1]) ) {
-                setDisplay([...display, "+", input])
+
+        let newResult = 0
+        let tmpOper
+        calcArr.forEach((value, index) => {
+            console.log(newResult, tmpOper, value)
+            if( isNumber(value) ) {
+                if( tmpOper ) {
+                    newResult = _calculating(newResult, tmpOper, value)
+                    tmpOper = undefined
+                } else {
+                    newResult = value
+                }
             } else {
-                setDisplay([...display, input, "+"])
+                tmpOper = value
             }
-            setResult(Number(result) + Number(input))
-        }
+        })
 
-        setInputReset(true)
+        setResult(newResult)
+        setTmpOper(null)
+        console.log('calculate newResult :' + newResult)
     }
 
-    function minus() {
-        if( inputReset ) {
-            if( false === isNumber(display[display.length-1]) ) {
-                const newDisplay = display;
-                newDisplay.pop();
-                setDisplay([...newDisplay, "-"])
-            }
-            return;
-        }
-
-        if( isNumber(display[display.length-1]) ) {
-            setDisplay([...display, "-", input])
+    //숫자 입력 시
+    function appendNumber(value) {
+        if( null === tmpInput ) {
+            setTmpInput(value)
         } else {
-            setDisplay([...display, input, "-"])
+            setTmpInput(Number(tmpInput + "" + value))
         }
-        setResult(Number(result) - Number(input))
-
-        setInputReset(true)
     }
 
-    function divide() {
-        console.log('divide')
-        if( false === isNumber(display[display.length-1]) ) {
-            display.push(input)
-        }
-        display.push("/")
-
-        if( result !== 0 && input !== 0 ){
-            setResult(result / input)
-        } else {
-            setResult(input)
-        }
-
-        setInputReset(true)
-        console.log(result)
-    }
-
-    function multiply() {
-        if( null !== input ) {
-            display.push(input)
-            display.push("*")
-        }
-
-        if( result !== 0 ){
-            setResult(result * input)
-        } else {
-            setResult(input)
-        }
-        
-        setDisplayResult(true)
+    //연산자 입력 시
+    function appendOperator(operator) {
+        setTmpOper( operator )
     }
 
     function clear() {
-        setResult(0)
-        setInput(null)
-        setInputReset(true)
-        setDisplay([])
-        setDisplayResult(false)
-    }
-    
-    function calculate() {
-        if( isNumber(display[display.length-1]) ) {
-            
+        if( null === tmpInput ) {
+            allClear()
         } else {
-            switch(display[display.length-1]) {
-                case "+":
-                    setResult(Number(result) + Number(input))
-                    break;
-                case "-":
-                        setResult(Number(result) - Number(input))
-                    break;
-                case "*":
-                        setResult(Number(result) * Number(input))
-                    break;
-                case "/":
-                    if( Number(input) !== 0 ) {
-                        setResult(Number(result) / Number(input))
-                    }
-                    break;
-            }
-            display.push(input)
-            console.log(result)
+            setTmpInput(Number(tmpInput.toString().slice(0,-1)))
         }
     }
 
+    function allClear() {
+        setResult(0)
+        setDisplay([])
+        setInput(null)
+        setTmpInput(null)
+        setTmpOper(null)
+        setDisplayResult(false)
+    }
+    
     return (
         <div className="App">
             <table className="calculator">
@@ -158,31 +193,32 @@ function App() {
                     </td>
                 </tr>
                 <tr>
-                    <td colSpan="3"><CalcButton text="AC" onClick={clear} /></td>
-                    <td><CalcButton text="/" onClick={divide} /></td>
+                    <td><CalcButton text="AC" onClick={allClear} /></td>
+                    <td colSpan="2"><CalcButton text="Clear" onClick={clear} style={{width: "100px"}} /></td>
+                    <td><CalcButton text="/" onClick={(event)=>appendOperator("/")} /></td>
                 </tr>
                 <tr>
-                    <td><CalcButton text="7" onClick={(event)=>append(7)} /></td>
-                    <td><CalcButton text="8" onClick={(event)=>append(8)} /></td>
-                    <td><CalcButton text="9" onClick={(event)=>append(9)} /></td>
-                    <td><CalcButton text="*" onClick={multiply} /></td>
+                    <td><CalcButton text="7" onClick={(event)=>appendNumber(7)} /></td>
+                    <td><CalcButton text="8" onClick={(event)=>appendNumber(8)} /></td>
+                    <td><CalcButton text="9" onClick={(event)=>appendNumber(9)} /></td>
+                    <td><CalcButton text="*" onClick={(event)=>appendOperator("*")} /></td>
                 </tr>
                 <tr>
-                    <td><CalcButton text="4" onClick={(event)=>append(4)} /></td>
-                    <td><CalcButton text="5" onClick={(event)=>append(5)} /></td>
-                    <td><CalcButton text="6" onClick={(event)=>append(6)} /></td>
-                    <td><CalcButton text="-" onClick={minus} /></td>
+                    <td><CalcButton text="4" onClick={(event)=>appendNumber(4)} /></td>
+                    <td><CalcButton text="5" onClick={(event)=>appendNumber(5)} /></td>
+                    <td><CalcButton text="6" onClick={(event)=>appendNumber(6)} /></td>
+                    <td><CalcButton text="-" onClick={(event)=>appendOperator("-")} /></td>
                 </tr>
                 <tr>
-                    <td><CalcButton text="1" onClick={(event)=>append(1)} /></td>
-                    <td><CalcButton text="2" onClick={(event)=>append(2)} /></td>
-                    <td><CalcButton text="3" onClick={(event)=>append(3)} /></td>
-                    <td><CalcButton text="+" onClick={plus} /></td>
+                    <td><CalcButton text="1" onClick={(event)=>appendNumber(1)} /></td>
+                    <td><CalcButton text="2" onClick={(event)=>appendNumber(2)} /></td>
+                    <td><CalcButton text="3" onClick={(event)=>appendNumber(3)} /></td>
+                    <td><CalcButton text="+" onClick={(event)=>appendOperator("+")} /></td>
                 </tr>
                 <tr>
-                    <td colSpan="2"><CalcButton text="0" onClick={(event)=>append(0)} style={{width: "70px"}}/></td>
-                    <td><CalcButton text="." onClick={(event)=>append(".")} /></td>
-                    <td><CalcButton text="=" onClick={calculate} /></td>
+                    <td colSpan="2"><CalcButton text="0" onClick={(event)=>appendNumber(0)} style={{width: "100px"}}/></td>
+                    <td><CalcButton text="." onClick={(event)=>appendNumber(".")} /></td>
+                    <td><CalcButton text="=" onClick={(event)=>appendOperator("=")} /></td>
                 </tr>
                 </tbody>
             </table>
