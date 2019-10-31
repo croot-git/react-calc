@@ -5,7 +5,7 @@ import './App.css';
 // 숫자 확인 함수
 function isNumber(text) {
     if( undefined !== text && null !== text ) {
-        return (/^[\d]+$/g).test(text.toString().trim());
+        return (/^\d([\d\.]+)?$/g).test(text.toString().trim());
     } else {
         return false
     }
@@ -57,7 +57,6 @@ function App() {
         } else { //사칙연산 경우
             //연산 대상이 없을 경우 (숫자 선택한적 없는 경우)
             if( newDisplay.length === 0 ) {
-                console.log(tmpInput)
                 if( isNumber(tmpInput) ) {
                     newDisplay.push(tmpInput)
                 } else {
@@ -152,7 +151,7 @@ function App() {
         if( null === tmpInput ) {
             setTmpInput(value)
         } else {
-            setTmpInput(Number(tmpInput + "" + value))
+            setTmpInput(tmpInput + "" + value)
         }
     }
 
@@ -193,8 +192,8 @@ function App() {
                     </td>
                 </tr>
                 <tr>
-                    <td><CalcButton text="AC" onClick={allClear} /></td>
-                    <td colSpan="2"><CalcButton text="Clear" onClick={clear} style={{width: "100px"}} /></td>
+                    <td><CalcButton text="AC" triggerKey={[27]} onClick={allClear} /></td>
+                    <td colSpan="2"><CalcButton text="Clear" triggerKey={[46, 8]} onClick={clear} style={{width: "100px"}} /></td>
                     <td><CalcButton text="/" onClick={(event)=>appendOperator("/")} /></td>
                 </tr>
                 <tr>
@@ -218,10 +217,25 @@ function App() {
                 <tr>
                     <td colSpan="2"><CalcButton text="0" onClick={(event)=>appendNumber(0)} style={{width: "100px"}}/></td>
                     <td><CalcButton text="." onClick={(event)=>appendNumber(".")} /></td>
-                    <td><CalcButton text="=" onClick={(event)=>appendOperator("=")} /></td>
+                    <td><CalcButton text="=" triggerKey={[13]} onClick={(event)=>appendOperator("=")} /></td>
                 </tr>
                 </tbody>
             </table>
+
+            <div style={{
+                "position": "absolute",
+                "top": 0,
+                "right": 0,
+                "background": "#fff",
+                "fontSize": "0.8em"
+            }}>
+                <p>result : {result}</p>
+                <p>display : {display}</p>
+                <p>input : {input}</p>
+                <p>displayResult : {displayResult}</p>
+                <p>tmpInput : {tmpInput}</p>
+                <p>tmpOper : {tmpOper}</p>
+            </div>
         </div>
     );
 }
